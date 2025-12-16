@@ -1,0 +1,28 @@
+{
+  "name": "humanexmachina",
+  "version": "1.0.0",
+  "description": "Algolia RAG agent for PDF documents - machina_* indices",
+  "main": "index.js",
+  "scripts": {
+    "index-pdf": "node scripts/index-pdf.mjs",
+    "preview": "node scripts/index-pdf.mjs",
+    "serve": "npx serve docs -p 3000",
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui"
+  },
+  "keywords": [
+    "algolia",
+    "rag",
+    "pdf"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "algoliasearch": "^5.46.0",
+    "pdfjs-dist": "^4.0.379"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}
