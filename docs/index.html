@@ -582,6 +582,25 @@
   </style>
 </head>
 <body>
+  <!-- Password Gate -->
+  <div id="pw-gate" style="position:fixed;inset:0;background:var(--bg-primary);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;padding:2rem;">
+      <h2 style="margin-bottom:1rem;color:var(--text-primary);">Agent Machina</h2>
+      <p style="margin-bottom:1.5rem;color:var(--text-secondary);">Acces restreint</p>
+      <input type="password" id="pw-input" placeholder="Mot de passe" style="padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:1rem;width:200px;">
+      <button id="pw-btn" style="padding:0.75rem 1.5rem;background:var(--accent);color:white;border:none;border-radius:8px;cursor:pointer;margin-left:0.5rem;">Entrer</button>
+      <p id="pw-err" style="margin-top:1rem;color:var(--error-text);display:none;">Incorrect</p>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var g=document.getElementById('pw-gate'),i=document.getElementById('pw-input'),b=document.getElementById('pw-btn'),e=document.getElementById('pw-err');
+      if(localStorage.getItem('m_ok')==='1'){g.style.display='none';}
+      function check(){if(i.value==='humanexmachina'){localStorage.setItem('m_ok','1');g.style.display='none';}else{e.style.display='block';}}
+      b.onclick=check;i.onkeydown=function(ev){if(ev.key==='Enter')check();};
+    })();
+  </script>
+
   <header>
     <h1>Agent <span>Machina</span></h1>
     <p class="subtitle">Votre compagnon de lecture Human Machine</p>
