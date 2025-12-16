@@ -6,9 +6,9 @@
 // Configuration
 const CONFIG = {
   baseUrl: 'https://agent-studio.eu.algolia.com',
-  applicationId: 'latency',
-  apiKey: 'c5a80e18b6a631c35917c31e5d56fd86',
-  agentId: '3669b83e-4138-4db0-8b9f-f78c9e88d053',
+  applicationId: '__ALGOLIA_APP_ID__',
+  apiKey: '__ALGOLIA_SEARCH_KEY__',
+  agentId: '__ALGOLIA_AGENT_ID__',
   indexName: 'machina_v3',
 };
 

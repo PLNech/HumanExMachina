@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Inject secrets
+        run: |
+          sed -i "s/__ALGOLIA_APP_ID__/${{ secrets.ALGOLIA_APP_ID }}/g" docs/app.js
+          sed -i "s/__ALGOLIA_SEARCH_KEY__/${{ secrets.ALGOLIA_SEARCH_KEY }}/g" docs/app.js
+          sed -i "s/__ALGOLIA_AGENT_ID__/${{ secrets.ALGOLIA_AGENT_ID }}/g" docs/app.js
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
