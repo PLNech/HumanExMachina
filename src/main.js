@@ -1,5 +1,5 @@
 /**
- * Agent Machina - InstantSearch + Chat Widget with Tools
+ * Agent Machina - InstantSearch + Custom Chat Panel
  */
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
@@ -13,7 +13,6 @@ import {
   clearRefinements,
   configure,
 } from 'instantsearch.js/es/widgets';
-import { chat } from 'instantsearch.js/es/widgets';
 import 'instantsearch.css/themes/satellite-min.css';
 import './styles.css';
 
@@ -23,6 +22,7 @@ const CONFIG = {
   searchKey: import.meta.env.VITE_ALGOLIA_SEARCH_KEY || 'c5a80e18b6a631c35917c31e5d56fd86',
   agentId: import.meta.env.VITE_ALGOLIA_AGENT_ID || '3669b83e-4138-4db0-8b9f-f78c9e88d053',
   indexName: 'machina_v3',
+  agentEndpoint: 'https://latency.algolia.net/agent-studio/1/agents',
 };
 
 // ============ SEARCH CLIENT ============
@@ -94,98 +94,6 @@ const getSectionClass = (section) => {
 // Store current hits for modal
 let currentHits = {};
 
-// ============ TOOLS FOR AGENT ============
-const tools = {
-  // Filter by attribute
-  setFilter: {
-    template: {
-      layout: (data, { html }) => html`
-        <div class="tool-action">
-          ✅ Filtré par <strong>${data.toolCall.input.attribute}</strong>: ${data.toolCall.input.value}
-        </div>
-      `,
-    },
-    onToolCall: ({ input, addToolResult }) => {
-      const { attribute, value } = input;
-      search.helper.toggleFacetRefinement(attribute, value).search();
-      addToolResult({ output: { success: true, filtered: `${attribute}:${value}` } });
-    },
-  },
-
-  // Clear all filters
-  clearFilters: {
-    template: {
-      layout: (_, { html }) => html`
-        <div class="tool-action">🧹 Filtres effacés</div>
-      `,
-    },
-    onToolCall: ({ addToolResult }) => {
-      search.helper.clearRefinements().search();
-      addToolResult({ output: { success: true } });
-    },
-  },
-
-  // Set search query
-  setQuery: {
-    template: {
-      layout: (data, { html }) => html`
-        <div class="tool-action">
-          🔍 Recherche: <strong>"${data.toolCall.input.query}"</strong>
-        </div>
-      `,
-    },
-    onToolCall: ({ input, addToolResult }) => {
-      search.helper.setQuery(input.query).search();
-      addToolResult({ output: { success: true, query: input.query } });
-    },
-  },
-
-  // Add to favorites
-  addFavorite: {
-    template: {
-      layout: (data, { html }) => html`
-        <div class="tool-action">⭐ Ajouté aux favoris</div>
-      `,
-    },
-    onToolCall: ({ input, addToolResult }) => {
-      const hit = currentHits[input.objectID];
-      if (hit) {
-        toggleFavorite(input.objectID, hit);
-        addToolResult({ output: { success: true } });
-      } else {
-        addToolResult({ output: { success: false, error: 'Hit not found' } });
-      }
-    },
-  },
-
-  // Suggest queries as clickable buttons
-  suggestQueries: {
-    template: {
-      layout: (data, { html }) => {
-        const queries = data.toolCall.input.queries || [];
-        return html`
-          <div class="tool-suggestions">
-            <div class="suggestions-label">💡 Suggestions de recherche:</div>
-            <div class="suggestions-list">
-              ${queries.map(q => html`
-                <button class="suggestion-btn" onclick=${() => {
-                  search.helper.setQuery(q).search();
-                  const searchInput = document.querySelector('.ais-SearchBox-input');
-                  if (searchInput) searchInput.value = q;
-                }}>
-                  ${q}
-                </button>
-              `)}
-            </div>
-          </div>
-        `;
-      },
-    },
-    onToolCall: ({ input, addToolResult }) => {
-      addToolResult({ output: { success: true, suggested: input.queries } });
-    },
-  },
-};
 
 // ============ WIDGETS ============
 search.addWidgets([
@@ -288,26 +196,240 @@ search.addWidgets([
     container: '#pagination',
     padding: 2,
   }),
-
-  // Chat widget with tools - always open panel
-  chat({
-    container: '#chat',
-    agentId: CONFIG.agentId,
-    tools,
-    placeholder: 'Posez votre question...',
-    open: true, // Always open
-    templates: {
-      toggleButton: () => '', // Hide toggle button completely
-      messages: {
-        loading: (_, { html }) => html`
-          <div class="typing">
-            <span></span><span></span><span></span>
-          </div>
-        `,
-      },
-    },
-  }),
 ]);
+
+// ============ CUSTOM CHAT PANEL ============
+const chatState = {
+  messages: [],
+  isLoading: false,
+  conversationId: crypto.randomUUID(),
+};
+
+// Simple markdown to HTML (bold, italic, links, code)
+const renderMarkdown = (text) => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/\n/g, '<br>');
+};
+
+// Render chat messages
+const renderChat = () => {
+  const container = document.getElementById('chat');
+  if (!container) return;
+
+  const messagesHtml = chatState.messages.map((msg, i) => {
+    const isUser = msg.role === 'user';
+    const content = isUser ? msg.content : renderMarkdown(msg.content);
+    return `
+      <div class="chat-message ${isUser ? 'user' : 'assistant'}">
+        <div class="message-content">${content}</div>
+      </div>
+    `;
+  }).join('');
+
+  const loadingHtml = chatState.isLoading ? `
+    <div class="chat-message assistant">
+      <div class="message-content">
+        <div class="typing">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="chat-messages">
+      ${messagesHtml}
+      ${loadingHtml}
+    </div>
+    <form class="chat-form" onsubmit="return handleChatSubmit(event)">
+      <input type="text" class="chat-input" placeholder="Posez votre question..." autocomplete="off" />
+      <button type="submit" class="chat-submit" ${chatState.isLoading ? 'disabled' : ''}>
+        ${chatState.isLoading ? '...' : '➤'}
+      </button>
+    </form>
+  `;
+
+  // Scroll to bottom
+  const messagesEl = container.querySelector('.chat-messages');
+  if (messagesEl) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+};
+
+// Handle tool calls from agent
+const handleToolCall = (toolCall) => {
+  const { name, input } = toolCall;
+
+  switch (name) {
+    case 'setFilter':
+      search.helper.toggleFacetRefinement(input.attribute, input.value).search();
+      return { success: true, filtered: `${input.attribute}:${input.value}` };
+
+    case 'clearFilters':
+      search.helper.clearRefinements().search();
+      return { success: true };
+
+    case 'setQuery':
+      search.helper.setQuery(input.query).search();
+      const searchInput = document.querySelector('.ais-SearchBox-input');
+      if (searchInput) searchInput.value = input.query;
+      return { success: true, query: input.query };
+
+    case 'addFavorite':
+      const hit = currentHits[input.objectID];
+      if (hit) {
+        toggleFavorite(input.objectID, hit);
+        return { success: true };
+      }
+      return { success: false, error: 'Hit not found' };
+
+    case 'suggestQueries':
+      // Display suggestions in chat
+      return { success: true, suggested: input.queries };
+
+    default:
+      return { success: false, error: `Unknown tool: ${name}` };
+  }
+};
+
+// Convert messages to AI SDK v5 format
+const toAISdkV5Messages = (messages) => {
+  return messages.map(m => ({
+    role: m.role,
+    parts: [{ type: 'text', text: m.content }],
+  }));
+};
+
+// Send message to Agent Studio API
+const sendMessage = async (userMessage) => {
+  chatState.isLoading = true;
+  chatState.messages.push({ role: 'user', content: userMessage });
+  renderChat();
+
+  try {
+    const response = await fetch(
+      `${CONFIG.agentEndpoint}/${CONFIG.agentId}/completions?compatibilityMode=ai-sdk-5`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-algolia-api-key': CONFIG.searchKey,
+          'x-algolia-application-id': CONFIG.applicationId,
+        },
+        body: JSON.stringify({
+          id: chatState.conversationId,
+          messages: toAISdkV5Messages(chatState.messages),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    // Handle SSE streaming response
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let assistantMessage = '';
+    let buffer = '';
+    let lastRenderTime = 0;
+    const RENDER_THROTTLE = 50; // ms between renders
+
+    // Add placeholder message for streaming
+    chatState.messages.push({ role: 'assistant', content: '' });
+    const msgIndex = chatState.messages.length - 1;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+
+          // Handle different SSE event types (API uses 'delta' field)
+          if (event.type === 'text-delta' && event.delta) {
+            assistantMessage += event.delta;
+            chatState.messages[msgIndex].content = assistantMessage;
+
+            // Throttled render for smooth streaming
+            const now = Date.now();
+            if (now - lastRenderTime > RENDER_THROTTLE) {
+              renderChat();
+              lastRenderTime = now;
+            }
+          } else if (event.type === 'tool-call' && event.toolName) {
+            // Handle tool call
+            const result = handleToolCall({ name: event.toolName, input: event.args || {} });
+            console.log('Tool call:', event.toolName, result);
+          } else if (event.type === 'finish') {
+            // Stream finished
+            break;
+          }
+        } catch (e) {
+          // Skip invalid JSON lines
+        }
+      }
+    }
+
+    // Ensure final content is set
+    if (assistantMessage) {
+      chatState.messages[msgIndex].content = assistantMessage;
+    } else {
+      // No response received, remove placeholder
+      chatState.messages.splice(msgIndex, 1);
+    }
+
+  } catch (error) {
+    console.error('Chat error:', error);
+    chatState.messages.push({
+      role: 'assistant',
+      content: 'Désolé, une erreur est survenue. Réessayez.'
+    });
+  } finally {
+    chatState.isLoading = false;
+    renderChat();
+  }
+};
+
+// Handle form submission
+window.handleChatSubmit = (e) => {
+  e.preventDefault();
+  const input = e.target.querySelector('.chat-input');
+  const message = input?.value.trim();
+
+  if (message && !chatState.isLoading) {
+    input.value = '';
+    sendMessage(message);
+  }
+
+  return false;
+};
+
+// Clear chat
+window.clearChat = () => {
+  chatState.messages = [];
+  chatState.conversationId = crypto.randomUUID();
+  renderChat();
+  window.clearQuote?.();
+};
+
+// Initialize chat UI
+const initChat = () => {
+  renderChat();
+};
 
 // ============ CONTENT PROCESSING ============
 
@@ -490,9 +612,6 @@ window.askAboutQuote = (action) => {
   const context = buildContextString();
   const fullPrompt = context + prompt;
 
-  console.log('askAboutQuote:', action);
-  console.log('Context:', context ? 'yes' : 'no');
-
   // Close modal first
   window.closeModal();
 
@@ -502,47 +621,8 @@ window.askAboutQuote = (action) => {
     chatPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Find chat textarea
-  const chatInput = document.querySelector('#chat textarea') ||
-                    document.querySelector('#chat input');
-
-  if (chatInput) {
-    // Focus and scroll into view
-    chatInput.focus();
-    chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Set value with native setter
-    const isTextarea = chatInput.tagName.toLowerCase() === 'textarea';
-    const prototype = isTextarea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
-
-    if (nativeSetter) {
-      nativeSetter.call(chatInput, fullPrompt);
-    } else {
-      chatInput.value = fullPrompt;
-    }
-
-    // Trigger input event for React state sync
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-    console.log('Value set, length:', chatInput.value.length);
-
-    // Submit after short delay
-    setTimeout(() => {
-      const submitBtn = document.querySelector('#chat button[type="submit"]') ||
-                        document.querySelector('#chat form button') ||
-                        document.querySelector('#chat button[aria-label*="send" i]') ||
-                        document.querySelector('#chat button');
-
-      console.log('Submit btn:', submitBtn);
-
-      if (submitBtn) {
-        submitBtn.click();
-      }
-    }, 200);
-  } else {
-    console.error('No chat input found!');
-  }
+  // Send directly to our custom chat
+  sendMessage(fullPrompt);
 };
 
 // Build context string from current state
@@ -576,65 +656,9 @@ const buildContextString = () => {
   return parts.length ? parts.join('\n') + '\n\n' : '';
 };
 
-// Intercept chat form submission to inject context
-// Note: askAboutQuote already injects context, so this only adds for manual submissions
-const setupChatContextInjection = () => {
-  const chatContainer = document.querySelector('#chat');
-  if (!chatContainer) return;
-
-  // Observe for chat input form
-  const observer = new MutationObserver(() => {
-    const form = chatContainer.querySelector('form');
-    if (form && !form.dataset.contextInjected) {
-      form.dataset.contextInjected = 'true';
-
-      form.addEventListener('submit', (e) => {
-        const input = form.querySelector('textarea') || form.querySelector('input');
-        if (input && input.value.trim()) {
-          // Skip if already has context (from askAboutQuote)
-          if (input.value.startsWith('[Extrait') || input.value.startsWith('[Filtres') || input.value.startsWith('[Favoris')) {
-            return;
-          }
-          const context = buildContextString();
-          if (context) {
-            // Prepend context to the message
-            const isTextarea = input.tagName.toLowerCase() === 'textarea';
-            const prototype = isTextarea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-            const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
-
-            const newValue = context + input.value;
-            if (nativeSetter) {
-              nativeSetter.call(input, newValue);
-            } else {
-              input.value = newValue;
-            }
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-        }
-      }, true); // capture phase to run before widget handler
-    }
-  });
-
-  observer.observe(chatContainer, { childList: true, subtree: true });
-};
-
-// Initialize context injection after search starts
-search.on('render', () => {
-  setupChatContextInjection();
-});
 
 window.closeModal = () => {
   document.getElementById('modal').classList.remove('active');
-};
-
-// Clear chat - removes all messages
-window.clearChat = () => {
-  const messagesContainer = document.querySelector('#chat .ais-Chat-messages, #chat [class*="messages"]');
-  if (messagesContainer) {
-    messagesContainer.innerHTML = '';
-  }
-  // Also clear current quote context
-  window.clearQuote?.();
 };
 
 document.addEventListener('keydown', (e) => {
@@ -795,43 +819,17 @@ selectionMenu.addEventListener('click', (e) => {
   }
 });
 
-// Send prompt to chat
+// Send prompt to chat (using our custom chat system)
 const sendToChat = (prompt) => {
-  const chatInput = document.querySelector('#chat textarea') ||
-                    document.querySelector('#chat input');
-
-  if (chatInput) {
-    // Build context
-    const context = buildContextString();
-    const fullPrompt = context + prompt;
-
-    // Set value with native setter
-    const isTextarea = chatInput.tagName.toLowerCase() === 'textarea';
-    const prototype = isTextarea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-    const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
-
-    if (nativeSetter) {
-      nativeSetter.call(chatInput, fullPrompt);
-    } else {
-      chatInput.value = fullPrompt;
-    }
-
-    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-    chatInput.focus();
-
-    // Submit after short delay
-    setTimeout(() => {
-      const submitBtn = document.querySelector('#chat button[type="submit"]') ||
-                        document.querySelector('#chat form button') ||
-                        document.querySelector('#chat button');
-      submitBtn?.click();
-    }, 150);
-  }
+  const context = buildContextString();
+  const fullPrompt = context + prompt;
+  sendMessage(fullPrompt);
 };
 
 // ============ START ============
 search.start();
 initTheme();
+initChat();
 
 // Update favorites UI after search renders
 search.on('render', () => {
