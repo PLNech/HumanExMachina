@@ -25,17 +25,6 @@
       <p style="color:#555;margin-top:2rem;font-size:0.8rem;">Propulsé par <a href="https://www.algolia.com/doc/guides/ai/agent-studio/" target="_blank" style="color:#6366f1;text-decoration:none;">Algolia Agent Studio</a></p>
     </div>
   </div>
-  <script>
-    (function(){
-      var g=document.getElementById('pw-gate'),i=document.getElementById('pw-input'),b=document.getElementById('pw-btn');
-      var isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
-      var isAuth = localStorage.getItem('m_ok')==='1';
-      function unlock(){g.style.display='none';document.getElementById('app-wrapper').style.display='block';}
-      if(isLocal||isAuth){unlock();}
-      function check(){if(i.value==='humanexmachina'){localStorage.setItem('m_ok','1');unlock();}}
-      b.onclick=check;i.onkeydown=function(ev){if(ev.key==='Enter')check();};
-    })();
-  </script>
 
   <div id="app-wrapper" style="display:none;">
   <div class="app">
@@ -149,5 +138,17 @@
   </div>
   </div><!-- /app-wrapper -->
 
+  <script>
+    (function(){
+      var g=document.getElementById('pw-gate'),w=document.getElementById('app-wrapper');
+      var i=document.getElementById('pw-input'),b=document.getElementById('pw-btn');
+      var isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+      var isAuth = localStorage.getItem('m_ok')==='1';
+      function unlock(){g.style.display='none';w.style.display='block';}
+      if(isLocal||isAuth){unlock();}
+      function check(){if(i.value==='humanexmachina'){localStorage.setItem('m_ok','1');unlock();}}
+      b.onclick=check;i.onkeydown=function(ev){if(ev.key==='Enter')check();};
+    })();
+  </script>
 </body>
 </html>
