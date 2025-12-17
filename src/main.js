@@ -311,6 +311,24 @@ search.addWidgets([
 
 // ============ CONTENT PROCESSING ============
 
+// French concept variations: canonical → regex pattern for verb/noun forms
+const CONCEPT_VARIATIONS = {
+  'prise de recul': /\b(pris(?:e|es)?|prendre|prend(?:s|re)?)\s+(?:du|de|le|la)?\s*recul/gi,
+  'acceptation de soi': /\b(accept(?:ation|er|e|ons|ez|ent)|s'accept(?:er|e|ons|ez|ent))\s*(?:de\s+soi)?/gi,
+  'connaissance de soi': /\b(connaiss(?:ance|ances)|(?:se\s+)?conna[îi]tre|conna[îi](?:s|t|ssons|ssez|ssent))\s*(?:soi(?:-même)?)?/gi,
+  'gestion du temps': /\b(g[ée]r(?:er|e|ons|ez|ent)|gestion)\s+(?:du|de|le|son|mon|notre|leur)?\s*temps/gi,
+  'prise de décision': /\b(pris(?:e|es)?|prendre|prend(?:s|re)?)\s+(?:une|des|la|les)?\s*d[ée]cision(?:s)?/gi,
+  'passage à l\'action': /\b(pass(?:age|er|e|ons|ez|ent))\s+[àa]\s+l'action/gi,
+  'savoir dire non': /\b(savoir|sait|savons|savez|savent)?\s*dir(?:e|ons|ez|ent)?\s+non/gi,
+  'amélioration continue': /\b(am[ée]lior(?:ation|er|e|ons|ez|ent))\s*(?:continu(?:e|elle)?)?/gi,
+  'développement personnel': /\b(d[ée]velopp(?:ement|er|e|ons|ez|ent))\s*(?:personnel|perso)?/gi,
+  'équilibre vie pro/perso': /\b([ée]quilibr(?:e|er|ons|ez|ent))\s*(?:vie|entre)?\s*(?:pro(?:fessionnelle?)?|perso(?:nnelle?)?|travail)/gi,
+  'planification': /\b(planifi(?:cation|er|e|ons|ez|ent)|planifi[ée](?:s|e)?)/gi,
+  'priorisation': /\b(prioris(?:ation|er|e|ons|ez|ent)|priorit[ée](?:s)?)/gi,
+  'auto-observation': /\b(auto[- ]?observ(?:ation|er|e|ons|ez|ent)|s'observ(?:er|e|ons|ez|ent))/gi,
+  'remise en question': /\b(remis(?:e|es)?|remettre|remet(?:s|tons|tez|tent)?)\s+en\s+question/gi,
+};
+
 // Highlight concepts in content as clickable links
 const highlightConcepts = (content, concepts) => {
   if (!content || !concepts?.length) return content;
@@ -320,11 +338,19 @@ const highlightConcepts = (content, concepts) => {
   const sorted = [...concepts].sort((a, b) => b.length - a.length);
 
   for (const concept of sorted) {
-    // Escape regex special chars
-    const escaped = concept.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Match whole words, case insensitive
-    const regex = new RegExp(`\\b(${escaped})\\b`, 'gi');
-    result = result.replace(regex, `<span class="concept-link" data-concept="$1" onclick="window.filterByConcept('$1')">$1</span>`);
+    const canonical = concept.toLowerCase();
+
+    // Check if we have a variation pattern for this concept
+    if (CONCEPT_VARIATIONS[canonical]) {
+      result = result.replace(CONCEPT_VARIATIONS[canonical], (match) =>
+        `<span class="concept-link" data-concept="${concept}" onclick="window.filterByConcept('${concept}')">${match}</span>`
+      );
+    } else {
+      // Fallback to exact match
+      const escaped = concept.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b(${escaped})\\b`, 'gi');
+      result = result.replace(regex, `<span class="concept-link" data-concept="$1" onclick="window.filterByConcept('$1')">$1</span>`);
+    }
   }
   return result;
 };
