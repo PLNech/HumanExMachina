@@ -404,6 +404,44 @@ const sendMessage = async (userMessage) => {
   }
 };
 
+// Extract keywords from user question and sync search
+const syncSearchFromQuestion = (question) => {
+  // Skip if question is too short or is context-only
+  if (!question || question.length < 10) return;
+  if (question.startsWith('[Extrait') || question.startsWith('[Filtres')) return;
+
+  // French stopwords to filter out
+  const stopwords = new Set([
+    'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'et', 'ou', 'mais', 'donc',
+    'car', 'ni', 'que', 'qui', 'quoi', 'dont', 'où', 'ce', 'cette', 'ces', 'mon',
+    'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'notre', 'nos', 'votre',
+    'vos', 'leur', 'leurs', 'je', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils',
+    'elles', 'me', 'te', 'se', 'lui', 'en', 'dans', 'sur', 'sous', 'avec', 'sans',
+    'pour', 'par', 'chez', 'vers', 'entre', 'être', 'avoir', 'fait', 'faire',
+    'est', 'sont', 'a', 'ai', 'as', 'au', 'aux', 'plus', 'moins', 'très', 'bien',
+    'tout', 'tous', 'toute', 'toutes', 'autre', 'autres', 'même', 'aussi', 'si',
+    'ne', 'pas', 'jamais', 'rien', 'personne', 'comment', 'pourquoi', 'quand',
+    'comme', 'peut', 'peux', 'peuvent', 'dois', 'doit', 'faut', 'veux', 'veut',
+    'cherche', 'parle', 'dit', 'explique', 'raconte', 'décrit', 'moi', 'toi'
+  ]);
+
+  // Extract words, filter stopwords, keep meaningful terms
+  const words = question
+    .toLowerCase()
+    .replace(/[«»""''„‚\[\](){}]/g, ' ')
+    .replace(/[.,;:!?…]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopwords.has(w))
+    .slice(0, 4); // Max 4 keywords
+
+  if (words.length > 0) {
+    const query = words.join(' ');
+    search.helper.setQuery(query).search();
+    const searchInput = document.querySelector('.ais-SearchBox-input');
+    if (searchInput) searchInput.value = query;
+  }
+};
+
 // Handle form submission
 window.handleChatSubmit = (e) => {
   e.preventDefault();
@@ -412,6 +450,8 @@ window.handleChatSubmit = (e) => {
 
   if (message && !chatState.isLoading) {
     input.value = '';
+    // Sync search with question keywords
+    syncSearchFromQuestion(message);
     sendMessage(message);
   }
 
@@ -611,6 +651,14 @@ window.askAboutQuote = (action) => {
   // Build context from current quote
   const context = buildContextString();
   const fullPrompt = context + prompt;
+
+  // Sync search with quote concepts or content
+  if (currentQuote?.concepts?.length) {
+    const query = currentQuote.concepts.slice(0, 2).join(' ');
+    search.helper.setQuery(query).search();
+    const searchInput = document.querySelector('.ais-SearchBox-input');
+    if (searchInput) searchInput.value = query;
+  }
 
   // Close modal first
   window.closeModal();
@@ -827,6 +875,7 @@ selectionMenu.addEventListener('click', (e) => {
 const sendToChat = (prompt) => {
   const context = buildContextString();
   const fullPrompt = context + prompt;
+  syncSearchFromQuestion(prompt);
   sendMessage(fullPrompt);
 };
 
