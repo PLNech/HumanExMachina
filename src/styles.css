@@ -359,18 +359,74 @@ header {
   color: var(--text-primary);
 }
 
-#chat {
-  height: 100%;
+/* Chat Header */
+.chat-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-tertiary);
 }
 
-/* Override InstantSearch Chat styles */
+.chat-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.chat-clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  padding: 0.25rem;
+}
+
+.chat-clear-btn:hover {
+  opacity: 1;
+}
+
+#chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Override InstantSearch Chat styles - always open panel */
 #chat .ais-Chat {
   height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
+}
+
+/* Hide any launcher/toggle/close buttons from widget - always open mode */
+.ais-Chat-launcher,
+.ais-Chat-toggle,
+.ais-Chat-toggleButton,
+.ais-ChatToggle,
+.ais-Chat-close,
+[class*="ChatLauncher"],
+[class*="ChatToggle"],
+[class*="toggleButton"],
+[class*="ToggleButton"] {
+  display: none !important;
+}
+
+/* Ensure chat container is always visible */
+.ais-Chat-container,
+.ais-ChatContainer,
+[class*="ChatContainer"] {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  position: relative !important;
+  height: 100% !important;
 }
 
 #chat .ais-Chat-messages {
@@ -514,11 +570,36 @@ header {
 }
 
 .modal-header {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-title-section {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .modal-close {

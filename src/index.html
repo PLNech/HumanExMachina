@@ -10,6 +10,23 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
 </head>
 <body>
+  <!-- Password Gate -->
+  <div id="pw-gate" style="position:fixed;inset:0;background:var(--bg-primary,#0a0a0f);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;padding:2rem;">
+      <h2 style="color:#fff;margin-bottom:1rem;">Agent Machina</h2>
+      <input type="password" id="pw-input" placeholder="Mot de passe" style="padding:0.5rem 1rem;border-radius:6px;border:1px solid #333;background:#1a1a2e;color:#fff;margin-right:0.5rem;">
+      <button id="pw-btn" style="padding:0.5rem 1rem;border-radius:6px;border:none;background:#6366f1;color:#fff;cursor:pointer;">Entrer</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var g=document.getElementById('pw-gate'),i=document.getElementById('pw-input'),b=document.getElementById('pw-btn');
+      if(localStorage.getItem('m_ok')==='1'){g.style.display='none';}
+      function check(){if(i.value==='humanexmachina'){localStorage.setItem('m_ok','1');g.style.display='none';}}
+      b.onclick=check;i.onkeydown=function(ev){if(ev.key==='Enter')check();};
+    })();
+  </script>
+
   <div class="app">
     <!-- Header -->
     <header>
@@ -58,8 +75,12 @@
       <div id="pagination"></div>
     </main>
 
-    <!-- Right Panel - Chat -->
+    <!-- Right Panel - Chat (always open) -->
     <aside class="chat-panel">
+      <div class="chat-header">
+        <span class="chat-title">💬 Assistant</span>
+        <button class="chat-clear-btn" onclick="clearChat()" title="Nouvelle conversation">🗑️</button>
+      </div>
       <div id="chat"></div>
     </aside>
   </div>
@@ -77,12 +98,15 @@
   <div class="modal-overlay" id="modal" onclick="if(event.target === this) closeModal()">
     <div class="modal">
       <div class="modal-header">
-        <div>
+        <div class="modal-meta">
           <span class="hit-section" id="modal-section"></span>
-          <strong id="modal-chapter"></strong>
           <span class="hit-page" id="modal-page"></span>
         </div>
         <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-title-section">
+        <h2 class="modal-title" id="modal-title"></h2>
+        <div class="modal-subtitle" id="modal-chapter"></div>
       </div>
       <div class="modal-body" id="modal-body"></div>
       <div class="modal-actions">

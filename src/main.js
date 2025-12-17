@@ -289,15 +289,15 @@ search.addWidgets([
     padding: 2,
   }),
 
-  // Chat widget with tools
+  // Chat widget with tools - always open panel
   chat({
     container: '#chat',
     agentId: CONFIG.agentId,
     tools,
     placeholder: 'Posez votre question...',
-    launcher: false, // Disable floating launcher
-    floatingButton: false,
+    open: true, // Always open
     templates: {
+      toggleButton: () => '', // Hide toggle button completely
       messages: {
         loading: (_, { html }) => html`
           <div class="typing">
@@ -323,6 +323,13 @@ window.openModal = (objectID) => {
   document.querySelector(`[data-object-id="${objectID}"]`)?.classList.add('selected');
 
   const modal = document.getElementById('modal');
+
+  // Title (shortTitle or fallback)
+  const title = hit.shortTitle || hit.title || '';
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-title').style.display = title ? 'block' : 'none';
+
+  // Metadata - consistent with hits view
   document.getElementById('modal-section').textContent = hit.section || 'Intro';
   document.getElementById('modal-section').className = `hit-section ${getSectionClass(hit.section)}`;
   document.getElementById('modal-chapter').textContent = hit.chapterDisplay || hit.chapter || '0. Préambule';
@@ -539,6 +546,16 @@ search.on('render', () => {
 
 window.closeModal = () => {
   document.getElementById('modal').classList.remove('active');
+};
+
+// Clear chat - removes all messages
+window.clearChat = () => {
+  const messagesContainer = document.querySelector('#chat .ais-Chat-messages, #chat [class*="messages"]');
+  if (messagesContainer) {
+    messagesContainer.innerHTML = '';
+  }
+  // Also clear current quote context
+  window.clearQuote?.();
 };
 
 document.addEventListener('keydown', (e) => {
