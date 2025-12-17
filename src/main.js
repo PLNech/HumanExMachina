@@ -262,8 +262,8 @@ search.addWidgets([
               </button>
             </div>
             <div class="hit-main" data-action="open">
-              ${title ? html`<div class="hit-title">${title}</div>` : ''}
-              <div class="hit-subtitle">${hit.chapterDisplay || hit.chapter || '0. Préambule'}</div>
+              ${hit.shortTitle ? html`<div class="hit-title">${hit.shortTitle}</div>` : ''}
+              ${!hit.shortTitle ? html`<div class="hit-subtitle">${hit.chapterDisplay || hit.chapter || '0. Préambule'}</div>` : ''}
               <div class="hit-content">
                 ${components.Highlight({ hit, attribute: 'content' })}
               </div>
@@ -371,15 +371,17 @@ window.openModal = (objectID) => {
 
   const modal = document.getElementById('modal');
 
-  // Title (shortTitle or fallback)
-  const title = hit.shortTitle || hit.title || '';
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-title').style.display = title ? 'block' : 'none';
+  // Title: show shortTitle if exists, otherwise chapter shows as subtitle
+  const hasShortTitle = !!hit.shortTitle;
+  document.getElementById('modal-title').textContent = hit.shortTitle || '';
+  document.getElementById('modal-title').style.display = hasShortTitle ? 'block' : 'none';
 
-  // Metadata - consistent with hits view
+  // Metadata - show chapter as subtitle only if no shortTitle
   document.getElementById('modal-section').textContent = hit.section || 'Intro';
   document.getElementById('modal-section').className = `hit-section ${getSectionClass(hit.section)}`;
-  document.getElementById('modal-chapter').textContent = hit.chapterDisplay || hit.chapter || '0. Préambule';
+  const chapterEl = document.getElementById('modal-chapter');
+  chapterEl.textContent = hit.chapterDisplay || hit.chapter || '0. Préambule';
+  chapterEl.style.display = hasShortTitle ? 'none' : 'block';
   document.getElementById('modal-page').textContent = `p.${hit.page || '?'}`;
 
   // Process content: add breathing, then highlight concepts
