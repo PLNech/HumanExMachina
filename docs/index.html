@@ -143,9 +143,10 @@
       var g=document.getElementById('pw-gate'),w=document.getElementById('app-wrapper');
       var i=document.getElementById('pw-input'),b=document.getElementById('pw-btn');
       var isLocal = location.hostname==='localhost'||location.hostname==='127.0.0.1';
+      var forceLock = new URLSearchParams(location.search).has('lock');
       var isAuth = localStorage.getItem('m_ok')==='1';
       function unlock(){g.style.display='none';w.style.display='block';}
-      if(isLocal||isAuth){unlock();}
+      if(!forceLock && (isLocal||isAuth)){unlock();}
       function check(){if(i.value==='humanexmachina'){localStorage.setItem('m_ok','1');unlock();}}
       b.onclick=check;i.onkeydown=function(ev){if(ev.key==='Enter')check();};
     })();
