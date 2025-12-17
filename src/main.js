@@ -687,6 +687,120 @@ document.querySelector('#hits').addEventListener('click', (e) => {
   }
 });
 
+// ============ SELECTION CONTEXT MENU ============
+const createSelectionMenu = () => {
+  const menu = document.createElement('div');
+  menu.id = 'selection-menu';
+  menu.className = 'selection-menu';
+  menu.innerHTML = `
+    <button class="selection-btn" data-action="explain">
+      <span class="selection-quote">"</span>
+      <span class="selection-label">Explain</span>
+    </button>
+  `;
+  menu.style.display = 'none';
+  document.body.appendChild(menu);
+  return menu;
+};
+
+const selectionMenu = createSelectionMenu();
+
+// Position menu near selection
+const positionMenu = (rect) => {
+  const menuRect = selectionMenu.getBoundingClientRect();
+  let x = rect.right + 8;
+  let y = rect.top - 4;
+
+  // Keep in viewport
+  if (x + menuRect.width > window.innerWidth - 16) {
+    x = rect.left - menuRect.width - 8;
+  }
+  if (y < 8) y = rect.bottom + 4;
+
+  selectionMenu.style.left = `${x}px`;
+  selectionMenu.style.top = `${y}px`;
+};
+
+// Show menu on text selection in modal
+document.addEventListener('mouseup', (e) => {
+  const modalBody = document.getElementById('modal-body');
+  if (!modalBody?.contains(e.target) && e.target !== modalBody) {
+    selectionMenu.style.display = 'none';
+    return;
+  }
+
+  const selection = window.getSelection();
+  const text = selection?.toString().trim();
+
+  if (text && text.length > 3 && text.length < 500) {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    selectionMenu.dataset.selectedText = text;
+    selectionMenu.style.display = 'flex';
+    positionMenu(rect);
+  } else {
+    selectionMenu.style.display = 'none';
+  }
+});
+
+// Hide on click elsewhere
+document.addEventListener('mousedown', (e) => {
+  if (!selectionMenu.contains(e.target)) {
+    selectionMenu.style.display = 'none';
+  }
+});
+
+// Handle menu button click
+selectionMenu.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const selectedText = selectionMenu.dataset.selectedText;
+
+  if (action === 'explain' && selectedText) {
+    const prompt = `Explique "${selectedText}" dans ce contexte.`;
+    sendToChat(prompt);
+    selectionMenu.style.display = 'none';
+    window.getSelection()?.removeAllRanges();
+  }
+});
+
+// Send prompt to chat
+const sendToChat = (prompt) => {
+  const chatInput = document.querySelector('#chat textarea') ||
+                    document.querySelector('#chat input');
+
+  if (chatInput) {
+    // Build context
+    const context = buildContextString();
+    const fullPrompt = context + prompt;
+
+    // Set value with native setter
+    const isTextarea = chatInput.tagName.toLowerCase() === 'textarea';
+    const prototype = isTextarea ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+
+    if (nativeSetter) {
+      nativeSetter.call(chatInput, fullPrompt);
+    } else {
+      chatInput.value = fullPrompt;
+    }
+
+    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    chatInput.focus();
+
+    // Submit after short delay
+    setTimeout(() => {
+      const submitBtn = document.querySelector('#chat button[type="submit"]') ||
+                        document.querySelector('#chat form button') ||
+                        document.querySelector('#chat button');
+      submitBtn?.click();
+    }, 150);
+  }
+};
+
 // ============ START ============
 search.start();
 initTheme();
