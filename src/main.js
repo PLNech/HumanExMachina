@@ -615,10 +615,14 @@ window.askAboutQuote = (action) => {
   // Close modal first
   window.closeModal();
 
-  // Scroll chat panel into view
-  const chatPanel = document.querySelector('.chat-panel');
-  if (chatPanel) {
-    chatPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // On mobile, switch to chat tab
+  if (window.innerWidth <= 900) {
+    const chatTab = document.querySelector('.mobile-tab[data-tab="chat"]');
+    chatTab?.click();
+  } else {
+    // Desktop: scroll chat into view
+    const chatPanel = document.querySelector('.chat-panel');
+    chatPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // Send directly to our custom chat
@@ -826,10 +830,49 @@ const sendToChat = (prompt) => {
   sendMessage(fullPrompt);
 };
 
+// ============ MOBILE TABS ============
+const initMobileTabs = () => {
+  const tabs = document.querySelectorAll('.mobile-tab');
+  const results = document.querySelector('.results');
+  const chat = document.querySelector('.chat-panel');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+
+      // Update active tab
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Toggle panels
+      if (target === 'results') {
+        results?.classList.remove('hidden');
+        chat?.classList.remove('active');
+      } else {
+        results?.classList.add('hidden');
+        chat?.classList.add('active');
+        // Focus chat input
+        setTimeout(() => {
+          document.querySelector('.chat-input')?.focus();
+        }, 100);
+      }
+    });
+  });
+};
+
+// Switch to chat tab on mobile when sending message
+const switchToChatMobile = () => {
+  if (window.innerWidth <= 900) {
+    const chatTab = document.querySelector('.mobile-tab[data-tab="chat"]');
+    chatTab?.click();
+  }
+};
+
 // ============ START ============
 search.start();
 initTheme();
 initChat();
+initMobileTabs();
 
 // Update favorites UI after search renders
 search.on('render', () => {
