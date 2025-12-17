@@ -267,29 +267,42 @@ const handleToolCall = (toolCall) => {
   switch (name) {
     case 'setFilter':
       search.helper.toggleFacetRefinement(input.attribute, input.value).search();
-      return { success: true, filtered: `${input.attribute}:${input.value}` };
+      return {
+        success: true,
+        filtered: `${input.attribute}:${input.value}`,
+        toolDisplay: `🔍 *Filtré: ${input.value}*`
+      };
 
     case 'clearFilters':
       search.helper.clearRefinements().search();
-      return { success: true };
+      return { success: true, toolDisplay: '🧹 *Filtres effacés*' };
 
     case 'setQuery':
       search.helper.setQuery(input.query).search();
       const searchInput = document.querySelector('.ais-SearchBox-input');
       if (searchInput) searchInput.value = input.query;
-      return { success: true, query: input.query };
+      return {
+        success: true,
+        query: input.query,
+        toolDisplay: `🔍 *Recherche: "${input.query}"*`
+      };
 
     case 'addFavorite':
       const hit = currentHits[input.objectID];
       if (hit) {
         toggleFavorite(input.objectID, hit);
-        return { success: true };
+        return { success: true, toolDisplay: '⭐ *Ajouté aux favoris*' };
       }
       return { success: false, error: 'Hit not found' };
 
     case 'suggestQueries':
       // Display suggestions in chat
-      return { success: true, suggested: input.queries };
+      const suggestions = input.queries?.join(', ') || '';
+      return {
+        success: true,
+        suggested: input.queries,
+        toolDisplay: `💡 *Suggestions: ${suggestions}*`
+      };
 
     default:
       return { success: false, error: `Unknown tool: ${name}` };
@@ -371,9 +384,15 @@ const sendMessage = async (userMessage) => {
               lastRenderTime = now;
             }
           } else if (event.type === 'tool-call' && event.toolName) {
-            // Handle tool call
+            // Handle tool call and show in UI
             const result = handleToolCall({ name: event.toolName, input: event.args || {} });
             console.log('Tool call:', event.toolName, result);
+            // Show tool action in chat
+            if (result.toolDisplay) {
+              assistantMessage = result.toolDisplay + '\n\n' + assistantMessage;
+              chatState.messages[msgIndex].content = assistantMessage;
+              renderChat();
+            }
           } else if (event.type === 'finish') {
             // Stream finished
             break;
@@ -715,6 +734,13 @@ window.closeModal = () => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.closeModal();
+  // Ctrl+K or Cmd+K focuses search
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const searchInput = document.querySelector('.ais-SearchBox-input');
+    searchInput?.focus();
+    searchInput?.select();
+  }
 });
 
 // ============ THEME ============
