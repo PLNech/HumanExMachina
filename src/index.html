@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Machina - Compagnon Human Machine</title>
+  <meta name="description" content="Assistant IA pour explorer le livre Human Machine de Jean de La Rochebrochard.">
+  <meta property="og:title" content="Agent Machina">
+  <meta property="og:description" content="Votre compagnon de lecture pour Human Machine">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header>
+      <div class="logo">Agent <span>Machina</span></div>
+      <div class="search-box-container">
+        <div id="searchbox"></div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="openFavoritesModal()">⭐ Favoris <span id="fav-count"></span></button>
+        <button class="header-btn" id="theme-toggle" onclick="toggleTheme()">☀️</button>
+        <a href="https://www.humanmachine.com/?ref=pln-machina" target="_blank" class="header-btn">📖 Livre</a>
+        <a href="https://www.algolia.com/doc/guides/ai/agent-studio/" target="_blank" class="header-btn">🤖 Agent Studio</a>
+      </div>
+    </header>
+
+    <!-- Left Panel - Explorer -->
+    <aside class="explorer">
+      <div class="facet-section">
+        <div class="panel-title">📚 Sections</div>
+        <div id="section-facet"></div>
+      </div>
+
+      <div class="facet-section">
+        <div class="panel-title">📑 Chapitres</div>
+        <div id="chapter-facet"></div>
+      </div>
+
+      <div class="facet-section">
+        <div class="panel-title">💡 Concepts</div>
+        <div id="concepts-facet"></div>
+      </div>
+
+      <div class="facet-section">
+        <div class="panel-title">📝 Type</div>
+        <div id="type-facet"></div>
+      </div>
+    </aside>
+
+    <!-- Center Panel - Results -->
+    <main class="results">
+      <div class="results-header">
+        <div id="stats"></div>
+        <div id="clear"></div>
+      </div>
+      <div id="hits"></div>
+      <div id="pagination"></div>
+    </main>
+
+    <!-- Right Panel - Chat -->
+    <aside class="chat-panel">
+      <div id="chat"></div>
+    </aside>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <span>Propulsé par <a href="https://www.algolia.com/doc/guides/ai/agent-studio/?ref=pln-machina" target="_blank">Algolia Agent Studio</a></span>
+    <span>•</span>
+    <span>Livre: <a href="https://www.humanmachine.com/?ref=pln-machina" target="_blank">Human Machine</a> par Jean de La Rochebrochard</span>
+    <span>•</span>
+    <span>Agent par <a href="https://me.nech.pl" target="_blank">PLN</a></span>
+  </footer>
+
+  <!-- Content Modal -->
+  <div class="modal-overlay" id="modal" onclick="if(event.target === this) closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <span class="hit-section" id="modal-section"></span>
+          <strong id="modal-chapter"></strong>
+          <span class="hit-page" id="modal-page"></span>
+        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="modal-action-btn" onclick="askAboutQuote('explain')">
+          <span class="action-icon">💡</span>
+          <span class="action-label">Explique</span>
+        </button>
+        <button class="modal-action-btn" onclick="askAboutQuote('next')">
+          <span class="action-icon">🧭</span>
+          <span class="action-label">Ensuite</span>
+        </button>
+        <button class="modal-action-btn" onclick="askAboutQuote('apply')">
+          <span class="action-icon">🎯</span>
+          <span class="action-label">Appliquer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Favorites Modal -->
+  <div class="modal-overlay" id="favorites-modal" onclick="if(event.target === this) closeFavoritesModal()">
+    <div class="modal favorites-modal">
+      <div class="modal-header">
+        <h3>⭐ Mes Favoris</h3>
+        <button class="modal-close" onclick="closeFavoritesModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="favorites-list"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

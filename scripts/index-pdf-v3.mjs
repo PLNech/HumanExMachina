@@ -115,23 +115,41 @@ function detectSubsection(text, chapter) {
 
 function chunkText(text, chunkSize, overlap) {
   const chunks = [];
-  let start = 0;
   text = text.replace(/\s+/g, ' ').trim();
 
-  while (start < text.length) {
-    const end = Math.min(start + chunkSize, text.length);
-    let chunk = text.slice(start, end);
+  // Split into sentences first (French-aware: handle «», etc.)
+  const sentenceRegex = /[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g;
+  const sentences = text.match(sentenceRegex) || [text];
 
-    if (end < text.length) {
-      const lastPeriod = chunk.lastIndexOf('.');
-      if (lastPeriod > chunkSize * 0.5) {
-        chunk = chunk.slice(0, lastPeriod + 1);
+  let currentChunk = '';
+  let overlapBuffer = [];
+
+  for (let i = 0; i < sentences.length; i++) {
+    const sentence = sentences[i].trim();
+    if (!sentence) continue;
+
+    // If adding this sentence exceeds chunk size, save current and start new
+    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
+      chunks.push(currentChunk.trim());
+
+      // Build overlap from recent sentences
+      currentChunk = overlapBuffer.join(' ') + ' ' + sentence;
+      overlapBuffer = [sentence];
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+
+      // Keep track of recent sentences for overlap
+      overlapBuffer.push(sentence);
+      const overlapLen = overlapBuffer.join(' ').length;
+      while (overlapLen > overlap && overlapBuffer.length > 1) {
+        overlapBuffer.shift();
       }
     }
+  }
 
-    chunks.push(chunk.trim());
-    start = start + chunk.length - overlap;
-    if (start >= text.length - overlap) break;
+  // Don't forget the last chunk
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
   }
 
   return chunks;

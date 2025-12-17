@@ -4,8 +4,10 @@
   "description": "Algolia RAG agent for PDF documents - machina_* indices",
   "main": "index.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "index-pdf": "node scripts/index-pdf.mjs",
-    "preview": "node scripts/index-pdf.mjs",
+    "preview": "vite preview",
     "serve": "npx serve docs -p 3000",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui"
@@ -19,10 +21,14 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "algoliasearch": "^5.46.0",
     "pdfjs-dist": "^4.0.379"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "algoliasearch": "^5.46.0",
+    "dotenv": "^17.2.3",
+    "instantsearch.css": "^8.9.0",
+    "instantsearch.js": "^4.85.2",
+    "vite": "^7.3.0"
   }
 }
