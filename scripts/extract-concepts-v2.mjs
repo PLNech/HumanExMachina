@@ -10,10 +10,9 @@ const CONFIG = {
   algoliaAppId: process.env.ALGOLIA_APP_ID || 'latency',
   algoliaApiKey: process.env.ALGOLIA_ADMIN_KEY,
   indexName: process.env.ALGOLIA_INDEX || 'machina_v3',
-  // Azure Mistral EU endpoint
-  llmEndpoint: process.env.LLM_ENDPOINT || 'https://genai-foundry-europe.services.ai.azure.com/openai/v1/chat/completions',
+  llmEndpoint: 'https://openai.api.enablers.algolia.net/v1/chat/completions',
   llmKey: process.env.LLM_API_KEY,
-  llmModel: process.env.LLM_MODEL || 'Mistral-Large-3',
+  llmModel: 'qwen3-coder-30b-fp16',
   batchSize: 10,
   delayMs: 300,
 };
@@ -132,7 +131,6 @@ async function extractConcepts(text) {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${CONFIG.llmKey}`,
-      'api-key': CONFIG.llmKey, // Azure uses api-key header
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

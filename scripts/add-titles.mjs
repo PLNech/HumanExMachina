@@ -12,8 +12,6 @@ const {
   ALGOLIA_ADMIN_KEY,
   ALGOLIA_INDEX = 'machina_v3',
   LLM_API_KEY,
-  LLM_ENDPOINT = 'https://genai-foundry-europe.services.ai.azure.com/openai/v1/chat/completions',
-  LLM_MODEL = 'Mistral-Large-3',
 } = process.env;
 
 if (!ALGOLIA_ADMIN_KEY || !LLM_API_KEY) {
@@ -70,15 +68,14 @@ EXEMPLES DE BONS TITRES:
 `;
 
 async function generateTitle(content, chapter, section, page) {
-  const response = await fetch(LLM_ENDPOINT, {
+  const response = await fetch('https://openai.api.enablers.algolia.net/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${LLM_API_KEY}`,
-      'api-key': LLM_API_KEY, // Azure uses api-key header
     },
     body: JSON.stringify({
-      model: LLM_MODEL,
+      model: 'qwen3-coder-30b-fp16',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         {
