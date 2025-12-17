@@ -115,35 +115,49 @@ function detectSubsection(text, chapter) {
 
 function chunkText(text, chunkSize, overlap) {
   const chunks = [];
-  text = text.replace(/\s+/g, ' ').trim();
 
-  // Split into sentences first (French-aware: handle «», etc.)
-  const sentenceRegex = /[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g;
-  const sentences = text.match(sentenceRegex) || [text];
+  // Normalize whitespace but preserve paragraph breaks (double newlines)
+  text = text.replace(/[ \t]+/g, ' '); // Collapse horizontal whitespace
+  text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 newlines
+  text = text.trim();
+
+  // Split into paragraphs first, then sentences
+  const paragraphs = text.split(/\n\n+/);
 
   let currentChunk = '';
   let overlapBuffer = [];
 
-  for (let i = 0; i < sentences.length; i++) {
-    const sentence = sentences[i].trim();
-    if (!sentence) continue;
+  for (const para of paragraphs) {
+    // Split paragraph into sentences (French-aware)
+    const sentenceRegex = /[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g;
+    const sentences = para.match(sentenceRegex) || [para];
 
-    // If adding this sentence exceeds chunk size, save current and start new
-    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
+    for (const sentence of sentences) {
+      const s = sentence.trim();
+      if (!s) continue;
 
-      // Build overlap from recent sentences
-      currentChunk = overlapBuffer.join(' ') + ' ' + sentence;
-      overlapBuffer = [sentence];
-    } else {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
+      // If adding this sentence exceeds chunk size, save current and start new
+      if (currentChunk.length + s.length > chunkSize && currentChunk.length > 0) {
+        chunks.push(currentChunk.trim());
 
-      // Keep track of recent sentences for overlap
-      overlapBuffer.push(sentence);
-      const overlapLen = overlapBuffer.join(' ').length;
-      while (overlapLen > overlap && overlapBuffer.length > 1) {
-        overlapBuffer.shift();
+        // Build overlap from recent sentences
+        currentChunk = overlapBuffer.join(' ') + ' ' + s;
+        overlapBuffer = [s];
+      } else {
+        currentChunk += (currentChunk ? ' ' : '') + s;
+
+        // Keep track of recent sentences for overlap
+        overlapBuffer.push(s);
+        const overlapLen = overlapBuffer.join(' ').length;
+        while (overlapLen > overlap && overlapBuffer.length > 1) {
+          overlapBuffer.shift();
+        }
       }
+    }
+
+    // Add paragraph break marker if we're continuing
+    if (currentChunk && currentChunk.length < chunkSize * 0.8) {
+      currentChunk += '\n\n';
     }
   }
 
@@ -164,8 +178,38 @@ async function extractPdfPages(pdfPath) {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    const text = content.items.map(item => item.str).join(' ').trim();
-    pages.push({ pageNum: i, text });
+
+    // Preserve paragraph structure by detecting Y-position changes
+    let text = '';
+    let lastY = null;
+    const LINE_THRESHOLD = 5; // pixels difference to consider new line
+    const PARA_THRESHOLD = 15; // larger gap = new paragraph
+
+    for (const item of content.items) {
+      if (!item.str) continue;
+
+      const y = item.transform ? item.transform[5] : null;
+
+      if (lastY !== null && y !== null) {
+        const yDiff = Math.abs(lastY - y);
+        if (yDiff > PARA_THRESHOLD) {
+          // New paragraph - double newline
+          text += '\n\n';
+        } else if (yDiff > LINE_THRESHOLD) {
+          // New line within paragraph
+          text += ' ';
+        } else if (item.str.startsWith(' ') || text.endsWith(' ')) {
+          // Same line, already spaced
+        } else {
+          text += ' ';
+        }
+      }
+
+      text += item.str;
+      lastY = y;
+    }
+
+    pages.push({ pageNum: i, text: text.trim() });
   }
 
   await doc.destroy();
