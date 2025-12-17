@@ -830,6 +830,62 @@ const sendToChat = (prompt) => {
   sendMessage(fullPrompt);
 };
 
+// ============ RESIZE HANDLE ============
+const initResizeHandle = () => {
+  const handle = document.getElementById('resize-handle');
+  const app = document.querySelector('.app');
+  if (!handle || !app) return;
+
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  // Load saved width
+  const savedWidth = localStorage.getItem('chat_width');
+  if (savedWidth) {
+    app.style.setProperty('--chat-width', savedWidth);
+  }
+
+  const startResize = (e) => {
+    isResizing = true;
+    startX = e.clientX || e.touches?.[0]?.clientX;
+    const chatPanel = document.querySelector('.chat-panel');
+    startWidth = chatPanel?.offsetWidth || 400;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  };
+
+  const doResize = (e) => {
+    if (!isResizing) return;
+    const clientX = e.clientX || e.touches?.[0]?.clientX;
+    const diff = startX - clientX;
+    const newWidth = Math.min(Math.max(startWidth + diff, 250), 700);
+    app.style.setProperty('--chat-width', `${newWidth}px`);
+  };
+
+  const stopResize = () => {
+    if (!isResizing) return;
+    isResizing = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    // Save width
+    const chatPanel = document.querySelector('.chat-panel');
+    if (chatPanel) {
+      localStorage.setItem('chat_width', `${chatPanel.offsetWidth}px`);
+    }
+  };
+
+  handle.addEventListener('mousedown', startResize);
+  handle.addEventListener('touchstart', startResize, { passive: false });
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('touchmove', doResize, { passive: false });
+  document.addEventListener('mouseup', stopResize);
+  document.addEventListener('touchend', stopResize);
+};
+
 // ============ MOBILE TABS ============
 const initMobileTabs = () => {
   const tabs = document.querySelectorAll('.mobile-tab');
@@ -873,6 +929,7 @@ search.start();
 initTheme();
 initChat();
 initMobileTabs();
+initResizeHandle();
 
 // Update favorites UI after search renders
 search.on('render', () => {
