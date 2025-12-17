@@ -613,10 +613,32 @@ header {
 .modal-body {
   padding: 1.25rem;
   overflow-y: auto;
-  line-height: 1.7;
+  line-height: 1.8;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  white-space: pre-wrap;
+}
+
+.modal-body p {
+  margin: 0 0 1em 0;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Concept highlighting */
+.concept-link {
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.concept-link:hover {
+  background: rgba(99, 102, 241, 0.25);
+  text-decoration: underline;
 }
 
 /* Modal Action Buttons */

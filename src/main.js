@@ -309,6 +309,53 @@ search.addWidgets([
   }),
 ]);
 
+// ============ CONTENT PROCESSING ============
+
+// Highlight concepts in content as clickable links
+const highlightConcepts = (content, concepts) => {
+  if (!content || !concepts?.length) return content;
+
+  let result = content;
+  // Sort by length descending to match longer phrases first
+  const sorted = [...concepts].sort((a, b) => b.length - a.length);
+
+  for (const concept of sorted) {
+    // Escape regex special chars
+    const escaped = concept.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match whole words, case insensitive
+    const regex = new RegExp(`\\b(${escaped})\\b`, 'gi');
+    result = result.replace(regex, `<span class="concept-link" data-concept="$1" onclick="window.filterByConcept('$1')">$1</span>`);
+  }
+  return result;
+};
+
+// Add breathing to content with smart paragraph detection
+const addBreathing = (content) => {
+  if (!content) return content;
+
+  // Split into sentences (period followed by space and capital letter)
+  let result = content;
+
+  // Detect paragraph breaks: period + space + capital letter after a long sentence
+  // Also handle: quotes ending, then new sentence
+  result = result.replace(/\.(\s+)([A-ZÀ-ÖØ-Ý])/g, (match, space, letter) => {
+    return `.</p><p>${letter}`;
+  });
+
+  // Wrap in paragraph tags if we added any
+  if (result.includes('</p>')) {
+    result = `<p>${result}</p>`;
+  }
+
+  return result;
+};
+
+// Filter by concept from highlighted link
+window.filterByConcept = (concept) => {
+  search.helper.toggleFacetRefinement('concepts', concept).search();
+  window.closeModal();
+};
+
 // ============ MODAL ============
 window.currentHits = currentHits;
 
@@ -334,7 +381,11 @@ window.openModal = (objectID) => {
   document.getElementById('modal-section').className = `hit-section ${getSectionClass(hit.section)}`;
   document.getElementById('modal-chapter').textContent = hit.chapterDisplay || hit.chapter || '0. Préambule';
   document.getElementById('modal-page').textContent = `p.${hit.page || '?'}`;
-  document.getElementById('modal-body').innerHTML = hit.content || '';
+
+  // Process content: add breathing, then highlight concepts
+  let processedContent = addBreathing(hit.content || '');
+  processedContent = highlightConcepts(processedContent, hit.concepts);
+  document.getElementById('modal-body').innerHTML = processedContent;
 
   // Store current quote for chat context
   currentQuote = {
