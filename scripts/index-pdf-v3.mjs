@@ -121,43 +121,74 @@ function chunkText(text, chunkSize, overlap) {
   text = text.replace(/\n{3,}/g, '\n\n'); // Max 2 newlines
   text = text.trim();
 
-  // Split into paragraphs first, then sentences
-  const paragraphs = text.split(/\n\n+/);
+  // Split into complete sentences (French-aware, greedy)
+  // Match: text ending with punctuation, or text before a capital letter start
+  const sentences = [];
+  const sentenceRegex = /[^.!?]*[.!?]+(?:\s*(?=\n|[A-ZÀ-ÖØ-Ý«])|\s*$)/g;
+  let match;
+  let lastIndex = 0;
 
+  while ((match = sentenceRegex.exec(text)) !== null) {
+    // Include any text before this match (handles fragments)
+    if (match.index > lastIndex) {
+      const prefix = text.slice(lastIndex, match.index).trim();
+      if (prefix && sentences.length > 0) {
+        // Append fragment to previous sentence
+        sentences[sentences.length - 1] += ' ' + prefix;
+      } else if (prefix) {
+        sentences.push(prefix);
+      }
+    }
+    sentences.push(match[0].trim());
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Handle any remaining text
+  if (lastIndex < text.length) {
+    const remaining = text.slice(lastIndex).trim();
+    if (remaining) {
+      if (sentences.length > 0 && remaining.length < 50) {
+        // Short fragment - append to last sentence
+        sentences[sentences.length - 1] += ' ' + remaining;
+      } else {
+        sentences.push(remaining);
+      }
+    }
+  }
+
+  // Now chunk by sentences, ensuring chunks start with capital letters
   let currentChunk = '';
   let overlapBuffer = [];
 
-  for (const para of paragraphs) {
-    // Split paragraph into sentences (French-aware)
-    const sentenceRegex = /[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g;
-    const sentences = para.match(sentenceRegex) || [para];
+  for (let i = 0; i < sentences.length; i++) {
+    let s = sentences[i].trim();
+    if (!s) continue;
 
-    for (const sentence of sentences) {
-      const s = sentence.trim();
-      if (!s) continue;
+    // If sentence starts with lowercase, it's a fragment - merge with previous
+    const startsLower = /^[a-zà-öø-ÿ]/.test(s);
+    if (startsLower && currentChunk) {
+      currentChunk += ' ' + s;
+      continue;
+    }
 
-      // If adding this sentence exceeds chunk size, save current and start new
-      if (currentChunk.length + s.length > chunkSize && currentChunk.length > 0) {
+    // If adding this sentence exceeds chunk size, save current and start new
+    if (currentChunk.length + s.length > chunkSize && currentChunk.length > 100) {
+      // Only save if chunk starts with capital (proper sentence start)
+      const startsProper = /^[A-ZÀ-ÖØ-Ý«0-9]/.test(currentChunk.trim());
+      if (startsProper) {
         chunks.push(currentChunk.trim());
-
-        // Build overlap from recent sentences
         currentChunk = overlapBuffer.join(' ') + ' ' + s;
         overlapBuffer = [s];
       } else {
-        currentChunk += (currentChunk ? ' ' : '') + s;
-
-        // Keep track of recent sentences for overlap
-        overlapBuffer.push(s);
-        const overlapLen = overlapBuffer.join(' ').length;
-        while (overlapLen > overlap && overlapBuffer.length > 1) {
-          overlapBuffer.shift();
-        }
+        // Fragment chunk - keep building
+        currentChunk += ' ' + s;
       }
-    }
-
-    // Add paragraph break marker if we're continuing
-    if (currentChunk && currentChunk.length < chunkSize * 0.8) {
-      currentChunk += '\n\n';
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + s;
+      overlapBuffer.push(s);
+      while (overlapBuffer.join(' ').length > overlap && overlapBuffer.length > 1) {
+        overlapBuffer.shift();
+      }
     }
   }
 
@@ -166,7 +197,17 @@ function chunkText(text, chunkSize, overlap) {
     chunks.push(currentChunk.trim());
   }
 
-  return chunks;
+  // Final pass: merge any short orphan chunks
+  const mergedChunks = [];
+  for (const chunk of chunks) {
+    if (chunk.length < 100 && mergedChunks.length > 0) {
+      mergedChunks[mergedChunks.length - 1] += '\n\n' + chunk;
+    } else {
+      mergedChunks.push(chunk);
+    }
+  }
+
+  return mergedChunks;
 }
 
 async function extractPdfPages(pdfPath) {
